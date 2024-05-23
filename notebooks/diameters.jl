@@ -56,7 +56,7 @@ md"""
 We assume a linear model, shown as
 ```math
 \begin{align}
-x[k+1] &= Ax[k] Bu[k] \\
+x[k+1] &= Ax[k] + Bu[k] \\
 u[k] &= -Kx[k]
 \end{align}
 ```
@@ -98,7 +98,7 @@ md"""
 In this section, we use types from the JuliaReach organization to develop a reachability algorithm for discrete linear systems with an additive noise term.  That is, the dynamics are of the form
 
 ```math
-x[k+1] = Φ x[k] + w
+X[k+1] = Φ X[k] \oplus W
 ```
 
 where ``w`` is an additive noise term bounded by a zonotope ``W``.
@@ -120,6 +120,9 @@ The definition above is equivalent to ``-BKE_1``, as shown below
 md"""
 We visualize ``W`` below. Note that since ``B K`` has rank ``1``, the set reduces to one-dimensional.
 """
+
+# ╔═╡ d6fdc630-ed70-4f2c-b72c-e0d6ad5f114c
+plot(E1, ratio=1.)
 
 # ╔═╡ 78402a2c-9d6b-4995-abdd-13de3b461d21
 """
@@ -152,6 +155,7 @@ x0center = 10.
 
 # ╔═╡ 52451f35-9c22-47be-9652-79685c82e2a8
 function max_diam(pipe::Flowpipe)
+	@info findmax([diameter(rs.X) for rs in pipe])
 	maximum([diameter(rs.X) for rs in pipe])
 end
 
@@ -202,7 +206,7 @@ isequivalent(W, -B*K*E1)
 x0 = Zonotope(x0center * ones(2), x0size * I(2))
 
 # ╔═╡ e0ae4f1f-09bb-4123-9d82-56fcd5625050
-r = reach(Φ, x0, get_W(Zonotope([0., 0.], 2 * std(abs_rel_errors) * I(2))), 100)
+r = reach(Φ, x0, get_W(Zonotope([0., 0.], 0.5 * std(abs_rel_errors) * I(2))), 100)
 
 # ╔═╡ c4b58f79-a0b4-4788-9523-66fe75daa713
 let
@@ -248,8 +252,9 @@ end
 # ╟─6bf891ef-f82b-4c77-bb80-c4c525fafa0f
 # ╠═ab2f61c5-04f6-4ec3-8710-bfc1706b974d
 # ╟─ac82150d-f963-4e27-b137-72c96da1f9b1
+# ╠═d6fdc630-ed70-4f2c-b72c-e0d6ad5f114c
 # ╠═6b95a565-b6d1-4b94-89a1-cc8b33ae1384
-# ╟─78402a2c-9d6b-4995-abdd-13de3b461d21
+# ╠═78402a2c-9d6b-4995-abdd-13de3b461d21
 # ╠═bc5776f3-dbfa-42c3-854a-f1c1797dad58
 # ╠═9d3601e0-f3ef-461e-87f9-6c7b5c8e1922
 # ╠═e0ae4f1f-09bb-4123-9d82-56fcd5625050
