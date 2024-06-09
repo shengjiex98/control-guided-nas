@@ -49,6 +49,9 @@ begin
 	histogram(abs_rel_errors)
 end
 
+# ╔═╡ 50e10fe2-f3f7-4401-bbe9-7015dcc8acea
+@info "Ratio of errors below 1 standard deviation: $(count(x -> x < std(abs_rel_errors), abs_rel_errors)/length(abs_rel_errors))"
+
 # ╔═╡ f0c5c66e-95a2-4780-b333-60bc84c5edb1
 md"""
 ## System and Noise Modelling
@@ -236,6 +239,7 @@ end
 # ╟─e3246eee-8ece-4442-85d2-100ce9d50966
 # ╠═3ebcd854-328b-4c5f-a673-4cc7ecbfa4c8
 # ╟─8bb68cc3-b715-487b-8061-35d6771960ab
+# ╟─50e10fe2-f3f7-4401-bbe9-7015dcc8acea
 # ╟─f0c5c66e-95a2-4780-b333-60bc84c5edb1
 # ╠═722186e8-46c5-4a4b-b682-751c6cfb253e
 # ╠═70e766a1-f175-4ee7-829b-8b9830f64d73
