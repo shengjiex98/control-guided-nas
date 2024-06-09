@@ -1,0 +1,8 @@
+name: ctrl
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - numpy
+  - pyjuliacall
+  - pyjuliapkg
