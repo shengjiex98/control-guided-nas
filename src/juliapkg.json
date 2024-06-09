@@ -1,0 +1,13 @@
+{
+    "packages": {
+        "ControlSystemsBase": {
+            "uuid": "aaaaaaaa-a6ca-5380-bf3e-84a91bcd477e"
+        },
+        "LinearAlgebra": {
+            "uuid": "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+        },
+        "ReachabilityAnalysis": {
+            "uuid": "1e97bd63-91d1-579d-8e8d-501d2b57c93f"
+        }
+    }
+}
