@@ -16,23 +16,29 @@ accuracy = {
     "l15_udp": [0.6453, 0.6062, 0.5732, 0.5448, 0.5143]
 }
 
-diameter = {}
+diameter = {
+    "F1": {},
+    "CC": {}
+}
 
 def diam(latency: list[float], accuracy: list[float], sys: str):
     return [wrapper.get_max_diam(l, (1 - a)**2, sys=sys) for l, a in product(latency, accuracy)]
 
 # Layer 11 TCP results
-for setup in ["l11_tcp", "l15_tcp", "l11_udp", "l15_udp"]:
-    diameter[setup] = diam(latency[setup], accuracy[setup], sys="F1")
-    print(f"{setup} results")
-    print(diameter[setup])
+for sys in ["F1", "CC"]:
+    for setup in ["l11_tcp", "l15_tcp", "l11_udp", "l15_udp"]:
+        diameter[sys][setup] = diam(latency[setup], accuracy[setup], sys=sys)
+        print(f"{sys} {setup} results")
+        print(diameter[sys][setup])
 
 # Plotting
-for setup in ["l11_tcp", "l15_tcp", "l11_udp", "l15_udp"]:
-    plt.plot(range(1, 6), diameter[setup], label=setup, marker="x", lw=1)
-plt.xticks(range(1, 6))
-plt.xlabel("Packet loss (%)")
-plt.ylabel("Maximal diameter of the reachable sets (m)")
-plt.title("Reachability analysis with a simplified F1/10 car model")
-plt.legend()
-plt.show()
+for sys in ["F1", "CC"]:
+    for setup in ["l11_tcp", "l15_tcp", "l11_udp", "l15_udp"]:
+        plt.plot(range(1, 6), diameter[sys][setup], label=f"{sys} {setup}", marker="o", lw=4, markersize=15)
+    plt.xticks(range(1, 6), fontsize=15)
+    plt.yticks(fontsize=15)
+    plt.xlabel("Network loss (%)", fontsize=20)
+    plt.ylabel("Max diameter of reachable sets (m)", fontsize=20)
+    # plt.title("Reachability analysis with a simplified cruise control model", fontsize=18)
+    plt.legend(fontsize=15)
+    plt.show()
