@@ -3,8 +3,8 @@ from juliacall import Main as jl
 from juliacall import Pkg as jlpkg
 import pathlib
 
-# jlpkg.add(url="https://github.com/shengjiex98/ControlBenchmarks.jl.git")
-# jlpkg.add(url="https://github.com/shengjiex98/NoisyReach.jl.git")
+jlpkg.add(url="https://github.com/shengjiex98/ControlBenchmarks.jl.git")
+jlpkg.add(url="https://github.com/shengjiex98/NoisyReach.jl.git")
 
 jl.include(str(pathlib.Path(__file__).parent.resolve()) + "/get_max_diam.jl")
 jl.seval("using ControlBenchmarks")
