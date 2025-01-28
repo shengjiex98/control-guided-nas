@@ -1,4 +1,5 @@
 [deps]
 ControlSystemsBase = "aaaaaaaa-a6ca-5380-bf3e-84a91bcd477e"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+OffsetArrays = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"
 ReachabilityAnalysis = "1e97bd63-91d1-579d-8e8d-501d2b57c93f"

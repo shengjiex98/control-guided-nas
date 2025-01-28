@@ -1,4 +1,4 @@
-from src import wrapper
+from control_guided_nas import get_max_diam
 import matplotlib.pyplot as plt
 from itertools import product
 
@@ -22,7 +22,7 @@ diameter = {
 }
 
 def diam(latency: list[float], accuracy: list[float], sys: str):
-    return [wrapper.get_max_diam(l, (1 - a)**2, sys=sys) for l, a in zip(latency, accuracy)]
+    return [get_max_diam(l, (1 - a)**2, sys=sys) for l, a in zip(latency, accuracy)]
 
 for sys in ["F1", "CC"]:
     for setup in latency.keys():

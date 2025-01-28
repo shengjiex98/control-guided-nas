@@ -1,5 +1,9 @@
+module Models
+
 using ControlSystemsBase
 using LinearAlgebra
+
+export benchmarks
 
 # Resistor-capacitor network
 sys_rcn = let
@@ -94,3 +98,5 @@ benchmarks = Dict([
     :CC => sys_cc2,
     :MPC => sys_mpc
 ])
+
+end

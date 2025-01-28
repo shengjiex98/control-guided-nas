@@ -1,5 +1,4 @@
 # control-guided-nas
 
 ## Setup
-
-Run `pip install -e .` before using the examples.
+Install dependencies from `environment.yaml`, and run `pip install -e .` before using the examples.
