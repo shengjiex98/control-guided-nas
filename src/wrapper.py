@@ -3,11 +3,7 @@ from juliacall import Main as jl
 from juliacall import Pkg as jlpkg
 import pathlib
 
-# jlpkg.add(url="https://github.com/shengjiex98/ControlBenchmarks.jl.git")
-# jlpkg.add(url="https://github.com/shengjiex98/NoisyReach.jl.git")
-
 jl.include(str(pathlib.Path(__file__).parent.resolve()) + "/get_max_diam.jl")
-jl.seval("using ControlBenchmarks")
 
 def get_max_diam(latency: float, errors: float|list[float], sys: str="F1"):
     sys = jl.seval(f"benchmarks[:{sys}]")
