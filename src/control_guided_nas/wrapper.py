@@ -11,4 +11,4 @@ def get_max_diam(latency: float, errors: float|list[float], sys: str="F1"):
         errors = [errors] * sys.nx
     x0center = np.asarray([10.] * sys.nx)
     x0size = np.asarray([1.] * sys.nx)
-    return jl.get_max_diam(sys, latency, np.asarray(errors), x0center, x0size)
+    return jl.get_max_diam(sys, int(latency * 1000), np.asarray(errors), x0center, x0size)
