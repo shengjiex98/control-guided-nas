@@ -20,7 +20,7 @@ function get_max_diam(sys::StateSpace, latency_ms::Integer, errors::AbstractVect
     Φc = [A B; -K zeros(sys.nu, sys.nu)]
     # Closed-loop dynamics -- hold
     Φh = [A B; zeros(sys.nu, sys.nx) I]
-    Φ(k) = k % latency_ms == 0 ? Φc : Φh
+    Φ(k::Integer) = k % latency_ms == 0 ? Φc : Φh
 
     # Error bound Zonotope when calculating control input. It adds reachable
     # regions to the control input dimensions. The error bound is calculated
