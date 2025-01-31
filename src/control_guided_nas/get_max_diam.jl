@@ -29,8 +29,6 @@ function get_max_diam(sys::StateSpace, latency_ms::Integer, errors::AbstractVect
     Wc(k::Integer, x::Zonotope) = let
         # Use the generaotr matrix of the zonotope to calculate the maximum states
         max_states = sum(abs.(x.generators[1:sys.nx,:]), dims=2) |> vec
-        @info k x.generators 
-        @info max_states
         Zonotope(
             zeros(sys.nx + sys.nu), 
             Diagonal([zeros(sys.nx); K * (errors .* max_states)])
