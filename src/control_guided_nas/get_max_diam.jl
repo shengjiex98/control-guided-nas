@@ -3,13 +3,13 @@ using ControlSystemsBase
 using LinearAlgebra
 using ReachabilityAnalysis
 using Polyhedra
+using OffsetArrays: OffsetArray, Origin
 
 push!(LOAD_PATH, @__DIR__)
-using Reachability
 using Models
 
 function get_max_diam(s::StateSpace, latency_ms::Integer, errors::AbstractVector{<:Real}, 
-        x0center::AbstractVector{<:Real}, x0size::AbstractVector{<:Real})
+        x0center::AbstractVector{<:Real}, x0size::AbstractVector{<:Real}; return_pipe::Bool=true)
     @boundscheck length(errors) == s.nx || 
         throw(ArgumentError("Error ($(length(errors))) must have same dimensions as the system model ($(s.nx))"))
     A = c2d(s, 0.001).A
@@ -39,8 +39,47 @@ function get_max_diam(s::StateSpace, latency_ms::Integer, errors::AbstractVector
 
     x0 = Zonotope([x0center; zeros(s.nu)], Diagonal([x0size; zeros(s.nu)]))
 
-    r = reach(Φ, x0, W, 1000)
-    r, max_diam(r, s.nx)
+    reach(Φ, x0, W, 1000, s.nx, return_pipe=return_pipe)
+end
+
+"""
+	reach(Φ, x0, W, H; max_order=Inf, reduced_order=2, remove_redundant=true)
+
+Compute reachable sets for the dynamics ``x[k+1] = Φ x[k] + w``, where ``w`` is a noise term bounded by `W`.  The initial state is `x0`, and the time horizon is `H`.
+
+If `max_order` is given, we reduce order of the reachable set to `reduced_order` when it exceeds this limit.  If `remove_redundant` is true, redundant generators are removed at each step.
+"""
+function reach(Φ::Function, x0::LazySet, W::Function, H::Integer, nx::Integer; 
+        max_order::Real=Inf, reduced_order::Real=2, remove_redundant::Bool=true, return_pipe::Bool=false)
+	if return_pipe
+		x = OffsetArray(Vector{LazySet}(undef, H+1), Origin(0))
+		x[0] = x0
+	end
+
+	curr_x, maxdiam = x0, 0.
+	for k = 1:H
+		curr_x = minkowski_sum(linear_map(Φ(k-1), curr_x), W(k-1, curr_x))
+		if remove_redundant
+			curr_x = remove_redundant_generators(curr_x)
+		end
+		if order(curr_x) > max_order
+			curr_x = reduce_order(curr_x, reduced_order)
+		end
+		if return_pipe
+			x[k] = curr_x
+		end
+        maxdiam = max(maxdiam, diam(curr_x, nx))
+	end
+	
+	return return_pipe ? (maxdiam, Flowpipe([ReachSet(x_k, k) for (k, x_k) in enumerate(x)])) : (maxdiam,)
+end
+reach(Φ, x0::LazySet, W, H::Integer, nx::Integer; kwargs...) = reach(tofunc(Φ), x0, tofunc(W), H, nx; kwargs...)
+
+"""
+Convert x to a function with constant return value if it is not already a function.
+"""
+function tofunc(x)
+	x isa Function ? x : (args...) -> x
 end
 
 """
@@ -49,7 +88,11 @@ end
 Return the maximum diameter of reachable sets in a Flowpipe.
 """
 function max_diam(pipe::Flowpipe, nx::Integer)
-	[maximum(maximum(rs.X.generators[1:nx,:], dims=2) - minimum(rs.X.generators[1:nx,:], dims=2)) for rs in pipe] |> maximum
+	[diam(rs.X, nx) for rs in pipe] |> maximum
+end
+
+function diam(x::LazySet, nx::Integer)
+    maximum(x.generators[1:nx,:], dims=2) - minimum(x.generators[1:nx,:], dims=2) |> maximum
 end
 
 # s = benchmarks[:F1]
