@@ -22,7 +22,7 @@ diameter = {
 }
 
 def diam(latency: list[float], accuracy: list[float], sys: str):
-    return [get_max_diam(l, (1 - a)**2, sys=sys) for l, a in zip(latency, accuracy)]
+    return [get_max_diam(l, (1 - a)**2, s=sys) for l, a in zip(latency, accuracy)]
 
 for sys in ["F1", "CC"]:
     for setup in latency.keys():
