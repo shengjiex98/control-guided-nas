@@ -5,10 +5,10 @@ import pathlib
 
 jl.include(str(pathlib.Path(__file__).parent.resolve()) + "/get_max_diam.jl")
 
-def get_max_diam(latency: float, errors: float|list[float], s: str="F1"):
-    s = jl.seval(f"benchmarks[:{s}]")
+def get_max_diam(latency: float, errors: float|list[float], sysname: str="F1"):
+    s = jl.seval(f"benchmarks[:{sysname}]")
     if isinstance(errors, float):
         errors = [errors] * s.nx
     x0center = np.asarray([10.] * s.nx)
     x0size = np.asarray([1.] * s.nx)
-    return jl.get_max_diam(s, int(latency * 1000), np.asarray(errors), x0center, x0size)[1]
+    return jl.get_max_diam(s, int(latency * 1000), np.asarray(errors), x0center, x0size, return_pipe=False)[0]
