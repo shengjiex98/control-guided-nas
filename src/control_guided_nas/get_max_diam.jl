@@ -40,7 +40,16 @@ function get_max_diam(sys::StateSpace, latency_ms::Integer, errors::AbstractVect
     x0 = Zonotope([x0center; zeros(sys.nu)], Diagonal([x0size; zeros(sys.nu)]))
 
     r = reach(Φ, x0, W, 1000)
-    r, max_diam(r)
+    r, max_diam(r, sys.nx)
+end
+
+"""
+	max_diam(pipe, nx)
+
+Return the maximum diameter of reachable sets in a Flowpipe.
+"""
+function max_diam(pipe::Flowpipe, nx::Integer)
+	[maximum(maximum(rs.X.generators[1:nx,:], dims=2) - minimum(rs.X.generators[1:nx,:], dims=2)) for rs in pipe] |> maximum
 end
 
 # sys = benchmarks[:F1]

@@ -39,15 +39,6 @@ end
 reach(Φ, x0::LazySet, W, H::Integer; kwargs...) = reach(tofunc(Φ), x0, tofunc(W), H; kwargs...)
 
 """
-	max_diam(pipe)
-
-Return the maximum diameter of reachable sets in a Flowpipe.
-"""
-function max_diam(pipe::Flowpipe)
-	maximum([diameter(rs.X) for rs in pipe])
-end
-
-"""
 	get_error_bound(B, K, E)
 
 Calculate the additivie error bound zonotope W from matrices B, K, and 
