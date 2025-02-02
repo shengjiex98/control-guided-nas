@@ -92,7 +92,7 @@ function max_diam(pipe::Flowpipe, nx::Integer)
 end
 
 function diam(x::LazySet, nx::Integer)
-    maximum(x.generators[1:nx,:], dims=2) - minimum(x.generators[1:nx,:], dims=2) |> maximum
+    2 * sum(abs.(x.generators[1:nx,:]), dims=2) |> maximum
 end
 
 # s = benchmarks[:F1]
