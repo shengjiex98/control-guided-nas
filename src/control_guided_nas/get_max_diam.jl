@@ -17,9 +17,17 @@ function get_max_diam(s::StateSpace, latency_ms::Integer, errors::AbstractVector
     K = lqr(c2d(s, 0.001 * latency_ms), I, I)
 
     # Closed-loop dynamics -- control
-    Φc = [A B; -K zeros(s.nu, s.nu)]
+    Φc = [
+        A B zeros(s.nx, s.nu)
+        zeros(s.nu, (s.nx + s.nu)) I
+        -K zeros(s.nu, 2 * s.nu)
+    ]
     # Closed-loop dynamics -- hold
-    Φh = [A B; zeros(s.nu, s.nx) I]
+    Φh = [
+        A B zeros(s.nx, s.nu)
+        zeros(s.nu, s.nx) I zeros(s.nu, s.nu)
+        zeros(s.nu, s.nx + s.nu) I
+    ]
     Φ(k::Integer) = k % latency_ms == 0 ? Φc : Φh
 
     # Error bound Zonotope when calculating control input. It adds reachable
@@ -30,14 +38,14 @@ function get_max_diam(s::StateSpace, latency_ms::Integer, errors::AbstractVector
         # Use the generaotr matrix of the zonotope to calculate the maximum states
         max_states = (sum(abs.(x.generators[1:s.nx,:]), dims=2) |> vec) + abs.(x.center[1:s.nx])
         Zonotope(
-            zeros(s.nx + s.nu), 
-            Diagonal([zeros(s.nx); -K * (errors .* max_states)]
+            zeros(s.nx + 2 * s.nu), 
+            Diagonal([zeros(s.nx); zeros(s.nu); -K * (errors .* max_states)]
         ))
     end
-    Wh = Zonotope(zeros(s.nx + s.nu), Diagonal(zeros(s.nx + s.nu)))
+    Wh = Zonotope(zeros(s.nx + 2 * s.nu), Diagonal(zeros(s.nx + 2 * s.nu)))
     W = (k, x) -> k % latency_ms == 0 ? Wc(k, x) : Wh
 
-    x0 = Zonotope([x0center; zeros(s.nu)], Diagonal([x0size; zeros(s.nu)]))
+    x0 = Zonotope([x0center; zeros(2 * s.nu)], Diagonal([x0size; zeros(2 * s.nu)]))
 
     reach(Φ, x0, W, 1000, s.nx, return_pipe=return_pipe)
 end
