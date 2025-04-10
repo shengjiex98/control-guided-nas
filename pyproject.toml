@@ -24,6 +24,11 @@ examples = [
     "ipywidgets",
 ]
 
+[dependency-groups]
+dev = [
+    "pre-commit>=4.2.0",
+    "ruff>=0.11.4",
+]
 
 [tool.ruff]
 line-length = 88
@@ -39,4 +44,3 @@ docstring-code-format = true
 [tool.uv.sources]
 # noisyreach = { git = "https://github.com/shengjiex98/noisyreach" }
 noisyreach = { path = "../noisyreach", editable = true }
-
