@@ -1,3 +1,9 @@
+"""Control-guided neural architecture search wrapper module.
+
+This module provides the main Python interface for computing maximum diameters
+of reachable sets for control systems under various conditions.
+"""
+
 import pathlib
 
 import numpy as np
@@ -11,6 +17,24 @@ NON_LINEAR_SYS = ["CAR"]
 jl.include(str(pathlib.Path(__file__).parent.resolve()) + "/get_max_diam.jl")
 
 def get_max_diam(latency: float, errors: float | list[float], sysname: str = "ACCLK") -> float:
+    """Compute maximum diameter of reachable set for a control system.
+    
+    Args:
+        latency: Control latency in seconds
+        errors: Sensor/actuator errors. Can be float or list of floats.
+               For multi-sensing-error case studies, multi-dimensional
+               linear systems (MULTI_DIM_LINEAR_SYS) are the only appropriate ones.
+        sysname: System name. Options:
+                - Linear systems: "F1", "CC" 
+                - Multi-dimensional linear systems: "ACCLK"
+                - Non-linear systems: "CAR"
+    
+    Returns:
+        Maximum diameter of reachable set as float
+        
+    Raises:
+        ValueError: If sysname is not recognized or errors type is invalid
+    """
     if sysname in LINEAR_SYS:
         s = jl.seval(f"benchmarks[:{sysname}]")
         if isinstance(errors, float):

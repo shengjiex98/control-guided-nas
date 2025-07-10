@@ -1,5 +1,11 @@
 # control-guided-nas
 
+Control-guided neural architecture search library for computing maximum diameters of reachable sets for control systems under latency and sensing errors.
+
+## Usage
+
+See `examples/example.py` for basic usage examples. The main function `get_max_diam()` computes reachability analysis for linear systems (F1, CC), multi-dimensional linear systems (ACCLK), and non-linear systems (CAR).
+
 ## Setup
 
 ### Install uv
