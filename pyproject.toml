@@ -38,4 +38,5 @@ docstring-code-format = true
 
 [tool.uv.sources]
 noisyreach = { git = "https://github.com/shengjiex98/noisyreach" }
+# noisyreach = { path = "../noisyreach", editable = true }
 

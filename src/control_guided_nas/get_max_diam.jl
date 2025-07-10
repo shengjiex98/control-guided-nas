@@ -8,13 +8,43 @@ using OffsetArrays: OffsetArray, Origin
 push!(LOAD_PATH, @__DIR__)
 using Models
 
-function get_max_diam(s::StateSpace, latency_ms::Integer, errors::AbstractVector{<:Real}, 
-        x0center::AbstractVector{<:Real}, x0size::AbstractVector{<:Real}; return_pipe::Bool=true)
+INIT_POINTS = Dict([
+    :ACCLK => [0.0, 0.0, -0.5, 0.1, 0.0, 15.0, 12.0, -2.0],
+])
+INIT_SIZES = Dict([
+    :ACCLK => fill(0.1, 8),
+])
+CONTROLLERS = Dict([
+    :ACCLK => lqr(
+        c2d(Models.benchmarks[:ACCLK], 0.02), 
+        diagm([100.0, 50.0, 1.0, 1.0, 0.1, 10.0, 50.0, 5.0]), 
+        diagm([1.0, 0.1, 2.0, 10.0])
+    ),
+])
+ERROR_MAPS = Dict([
+    :ACCLK => [0 0 1;
+               0 0 0;
+               0 0 0;
+               0 0 0;
+               0 0 0;
+               0 0 0;
+               1 0 0;
+               0 1 0],
+])
+DIMS = Dict([
+    :ACCLK => [1, 7],  # Select only dimensions 1 and 7
+])
+
+function get_max_diam(s::StateSpace, latency_ms::Integer, 
+    errors::AbstractVector{<:Real}, x0center::AbstractVector{<:Real}, 
+    x0size::AbstractVector{<:Real}; K::Union{Nothing,Matrix{<:Real}}=nothing, return_pipe::Bool=false, dims::Union{Nothing,AbstractVector{<:Integer}}=nothing)
     @boundscheck length(errors) == s.nx || 
         throw(ArgumentError("Error ($(length(errors))) must have same dimensions as the system model ($(s.nx))"))
     A = c2d(s, 0.001).A
     B = c2d(s, 0.001).B
-    K = lqr(c2d(s, 0.001 * latency_ms), I, I)
+    if K === nothing
+        K = lqr(c2d(s, 0.001 * latency_ms), I, I)
+    end
 
     # Closed-loop dynamics -- control
     Φc = [
@@ -47,7 +77,27 @@ function get_max_diam(s::StateSpace, latency_ms::Integer, errors::AbstractVector
 
     x0 = Zonotope([x0center; zeros(2 * s.nu)], Diagonal([x0size; zeros(2 * s.nu)]))
 
-    reach(Φ, x0, W, 1000, s.nx, return_pipe=return_pipe)
+    reach(Φ, x0, W, 1000, s.nx, return_pipe=return_pipe, dims=dims)
+end
+
+function get_max_diam_multi_dim(
+    sysname::String, latency_ms::Integer, errors::AbstractVector{<:Real};
+    return_pipe::Bool=false
+)
+    s = Models.benchmarks[Symbol(sysname)]
+    @boundscheck length(errors) == size(ERROR_MAPS[Symbol(sysname)], 2) || 
+        throw(ArgumentError("Error ($(length(errors))) must have the predefined dimensions ($(size(ERROR_MAPS[Symbol(sysname)], 2))) for the system model ($(sysname))"))
+
+    x0center = INIT_POINTS[Symbol(sysname)]
+    x0size = INIT_SIZES[Symbol(sysname)]
+    K = CONTROLLERS[Symbol(sysname)]
+    errors = ERROR_MAPS[Symbol(sysname)] * errors
+
+    preset_dims = DIMS[Symbol(sysname)]
+    get_max_diam(
+        s, latency_ms, errors, 
+        x0center, x0size; K=K, return_pipe=return_pipe, dims=preset_dims
+    )
 end
 
 """
@@ -58,7 +108,7 @@ Compute reachable sets for the dynamics ``x[k+1] = Φ x[k] + w``, where ``w`` is
 If `max_order` is given, we reduce order of the reachable set to `reduced_order` when it exceeds this limit.  If `remove_redundant` is true, redundant generators are removed at each step.
 """
 function reach(Φ::Function, x0::LazySet, W::Function, H::Integer, nx::Integer; 
-        max_order::Real=Inf, reduced_order::Real=2, remove_redundant::Bool=true, return_pipe::Bool=false)
+        max_order::Real=Inf, reduced_order::Real=2, remove_redundant::Bool=true, return_pipe::Bool=false, dims::Union{Nothing,AbstractVector{<:Integer}}=nothing)
 	if return_pipe
 		x = OffsetArray(Vector{LazySet}(undef, H+1), Origin(0))
 		x[0] = x0
@@ -76,7 +126,7 @@ function reach(Φ::Function, x0::LazySet, W::Function, H::Integer, nx::Integer;
 		if return_pipe
 			x[k] = curr_x
 		end
-        maxdiam = max(maxdiam, diam(curr_x, nx))
+        maxdiam = max(maxdiam, diam(curr_x, nx; dims=dims))
 	end
 	
 	return return_pipe ? (maxdiam, Flowpipe([ReachSet(x_k, k) for (k, x_k) in enumerate(x)])) : (maxdiam,)
@@ -99,8 +149,9 @@ function max_diam(pipe::Flowpipe, nx::Integer)
 	[diam(rs.X, nx) for rs in pipe] |> maximum
 end
 
-function diam(x::LazySet, nx::Integer)
-    2 * sum(abs.(x.generators[1:nx,:]), dims=2) |> maximum
+function diam(x::LazySet, nx::Integer; dims::Union{Nothing,AbstractVector{<:Integer}}=nothing)
+    selected_dims = dims === nothing ? (1:nx) : dims
+    2 * sum(abs.(x.generators[selected_dims,:]), dims=2) |> maximum
 end
 
 # s = benchmarks[:F1]
