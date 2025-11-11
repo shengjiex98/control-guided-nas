@@ -7,31 +7,18 @@ name = "control-guided-nas"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
-dependencies = [
-    "juliacall",
-    "juliapkg",
-    "noisyreach",
-    "numpy",
-]
+requires-python = ">=3.9"
+dependencies = ["juliacall", "juliapkg", "noisyreach", "numpy"]
 
 [project.optional-dependencies]
-examples = [
-    "matplotlib",
-    "pandas",
-    "ipykernel",
-    "tqdm",
-    "ipywidgets",
-]
+examples = ["matplotlib", "pandas", "ipykernel", "tqdm", "ipywidgets"]
 
 
 [tool.ruff]
 line-length = 88
 
 [tool.ruff.lint]
-extend-select = [
-    "I"
-]
+extend-select = ["I"]
 
 [tool.ruff.format]
 docstring-code-format = true
@@ -39,4 +26,3 @@ docstring-code-format = true
 [tool.uv.sources]
 noisyreach = { git = "https://github.com/shengjiex98/noisyreach" }
 # noisyreach = { path = "../noisyreach", editable = true }
-
