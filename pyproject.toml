@@ -18,6 +18,9 @@ dependencies = [
 [project.optional-dependencies]
 examples = ["matplotlib", "pandas", "ipykernel", "tqdm", "ipywidgets"]
 
+[tool.hatch.metadata]
+allow-direct-references = true
+
 
 [tool.ruff]
 line-length = 88
@@ -28,6 +31,6 @@ extend-select = ["I"]
 [tool.ruff.format]
 docstring-code-format = true
 
-[tool.uv.sources]
+# [tool.uv.sources]
 # noisyreach = { git = "https://github.com/shengjiex98/noisyreach" }
 # noisyreach = { path = "../noisyreach", editable = true }
