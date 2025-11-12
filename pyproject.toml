@@ -8,7 +8,12 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.9"
-dependencies = ["juliacall", "juliapkg", "noisyreach", "numpy"]
+dependencies = [
+    "juliacall",
+    "juliapkg",
+    "noisyreach @ git+https://github.com/shengjiex98/noisyreach",
+    "numpy",
+]
 
 [project.optional-dependencies]
 examples = ["matplotlib", "pandas", "ipykernel", "tqdm", "ipywidgets"]
@@ -24,5 +29,5 @@ extend-select = ["I"]
 docstring-code-format = true
 
 [tool.uv.sources]
-noisyreach = { git = "https://github.com/shengjiex98/noisyreach" }
+# noisyreach = { git = "https://github.com/shengjiex98/noisyreach" }
 # noisyreach = { path = "../noisyreach", editable = true }
