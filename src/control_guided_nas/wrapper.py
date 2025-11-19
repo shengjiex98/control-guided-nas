@@ -5,6 +5,7 @@ of reachable sets for control systems under various conditions.
 """
 
 import pathlib
+from typing import Union
 
 import numpy as np
 from juliacall import Main as jl
@@ -16,22 +17,25 @@ NON_LINEAR_SYS = ["CAR"]
 
 jl.include(str(pathlib.Path(__file__).parent.resolve()) + "/get_max_diam.jl")
 
-def get_max_diam(latency: float, errors: float | list[float], sysname: str = "ACCLK") -> float:
+
+def get_max_diam(
+    latency: float, errors: Union[float, list[float]], sysname: str = "ACCLK"
+) -> float:
     """Compute maximum diameter of reachable set for a control system.
-    
+
     Args:
         latency: Control latency in seconds
         errors: Sensor/actuator errors. Can be float or list of floats.
                For multi-sensing-error case studies, multi-dimensional
                linear systems (MULTI_DIM_LINEAR_SYS) are the only appropriate ones.
         sysname: System name. Options:
-                - Linear systems: "F1", "CC" 
+                - Linear systems: "F1", "CC"
                 - Multi-dimensional linear systems: "ACCLK"
                 - Non-linear systems: "CAR"
-    
+
     Returns:
         Maximum diameter of reachable set as float
-        
+
     Raises:
         ValueError: If sysname is not recognized or errors type is invalid
     """
