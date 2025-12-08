@@ -1,3 +1,5 @@
+from typing import List
+
 import matplotlib.pyplot as plt
 
 from control_guided_nas import get_max_diam
@@ -21,7 +23,7 @@ diameter = {
     "CC": {}
 }
 
-def diam(latency: list[float], accuracy: list[float], sys: str):
+def diam(latency: List[float], accuracy: List[float], sys: str):
     return [get_max_diam(l, (1 - a)**2, sysname=sys) for l, a in zip(latency, accuracy)]
 
 for sys in ["F1", "CC"]:

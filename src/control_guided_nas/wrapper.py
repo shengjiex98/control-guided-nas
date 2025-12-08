@@ -5,7 +5,7 @@ of reachable sets for control systems under various conditions.
 """
 
 import pathlib
-from typing import Union
+from typing import List, Union
 
 import numpy as np
 from juliacall import Main as jl
@@ -20,7 +20,7 @@ jl.include(str(pathlib.Path(__file__).parent.resolve()) + "/get_max_diam.jl")
 
 def get_max_diam(
     latency: float,
-    errors: Union[float, list[float]],
+    errors: Union[float, List[float]],
     sysname: str = "ACCLK",
     relative_error: bool = True,
 ) -> float:
