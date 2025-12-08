@@ -1614,7 +1614,7 @@ wheels = [
 [[package]]
 name = "noisyreach"
 version = "0.1.0"
-source = { git = "https://github.com/shengjiex98/noisyreach#9f35f27bd93601721824910d6ccd10f404b1961c" }
+source = { git = "https://github.com/shengjiex98/noisyreach#e984321332c4819c84931a8300f55c520dd3b588" }
 dependencies = [
     { name = "control", version = "0.9.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "control", version = "0.10.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },

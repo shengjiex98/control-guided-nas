@@ -80,7 +80,6 @@ def get_max_diam(
             round(latency * 1000),
             errors_a,
             return_pipe=False,
-            relative_error=relative_error,
         )[0]
     elif sysname in NON_LINEAR_SYS:
         if isinstance(errors, float):
