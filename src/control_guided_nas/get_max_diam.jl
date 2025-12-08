@@ -29,23 +29,31 @@ CONTROLLERS = Dict([
 ])
 ERROR_MAPS = Dict([
     :ACCLK => [0 0 1;
-               0 0 0;
-               0 0 0;
-               0 0 0;
-               0 0 0;
-               0 0 0;
-               1 0 0;
-               0 1 0],
+        0 0 0;
+        0 0 0;
+        0 0 0;
+        0 0 0;
+        0 0 0;
+        1 0 0;
+        0 1 0],
 ])
 DIMS = Dict([
     :ACCLK => [1, 7],  # Select only dimensions 1 and 7
 ])
 
-function get_max_diam(s::StateSpace, latency_ms::Integer, 
-    errors::AbstractVector{<:Real}, x0center::AbstractVector{<:Real}, 
-    x0size::AbstractVector{<:Real}; K::Union{Nothing,Matrix{<:Real}}=nothing, return_pipe::Bool=false, dims::Union{Nothing,AbstractVector{<:Integer}}=nothing)
-    @boundscheck length(errors) == s.nx || 
-        throw(ArgumentError("Error ($(length(errors))) must have same dimensions as the system model ($(s.nx))"))
+function get_max_diam(
+    s::StateSpace,
+    latency_ms::Integer,
+    errors::AbstractVector{<:Real},
+    x0center::AbstractVector{<:Real},
+    x0size::AbstractVector{<:Real};
+    K::Union{Nothing,Matrix{<:Real}}=nothing,
+    return_pipe::Bool=false,
+    relative_error::Bool=true,
+    dims::Union{Nothing,AbstractVector{<:Integer}}=nothing
+)
+    @boundscheck length(errors) == s.nx ||
+                 throw(ArgumentError("Error ($(length(errors))) must have same dimensions as the system model ($(s.nx))"))
     A = c2d(s, 0.001).A
     B = c2d(s, 0.001).B
     if K === nothing
@@ -70,14 +78,20 @@ function get_max_diam(s::StateSpace, latency_ms::Integer,
     # regions to the control input dimensions. The error bound is calculated
     # by taking the maximum absolute value of each state dimension, and 
     # multiplying the error rate with it.
-    Wc(k::Integer, x::Zonotope) = let
-        # Use the generaotr matrix of the zonotope to calculate the maximum states
-        max_states = (sum(abs.(x.generators[1:s.nx,:]), dims=2) |> vec) + abs.(x.center[1:s.nx])
-        Zonotope(
-            zeros(s.nx + 2 * s.nu), 
-            Diagonal([zeros(s.nx); zeros(s.nu); -K * (errors .* max_states)]
-        ))
-    end
+    Wc(k::Integer, x::Zonotope) =
+        if relative_error
+            # Use the generaotr matrix of the zonotope to calculate the maximum states
+            max_states = (sum(abs.(x.generators[1:s.nx, :]), dims=2) |> vec) + abs.(x.center[1:s.nx])
+            Zonotope(
+                zeros(s.nx + 2 * s.nu),
+                Diagonal([zeros(s.nx); zeros(s.nu); -K * (errors .* max_states)])
+            )
+        else
+            Zonotope(
+                zeros(s.nx + 2 * s.nu),
+                Diagonal([zeros(s.nx); zeros(s.nu); -K * errors])
+            )
+        end
     Wh = Zonotope(zeros(s.nx + 2 * s.nu), Diagonal(zeros(s.nx + 2 * s.nu)))
     W = (k, x) -> k % latency_ms == 0 ? Wc(k, x) : Wh
 
@@ -91,8 +105,8 @@ function get_max_diam_multi_dim(
     return_pipe::Bool=false
 )
     s = Models.benchmarks[Symbol(sysname)]
-    @boundscheck length(errors) == size(ERROR_MAPS[Symbol(sysname)], 2) || 
-        throw(ArgumentError("Error ($(length(errors))) must have the predefined dimensions ($(size(ERROR_MAPS[Symbol(sysname)], 2))) for the system model ($(sysname))"))
+    @boundscheck length(errors) == size(ERROR_MAPS[Symbol(sysname)], 2) ||
+                 throw(ArgumentError("Error ($(length(errors))) must have the predefined dimensions ($(size(ERROR_MAPS[Symbol(sysname)], 2))) for the system model ($(sysname))"))
 
     x0center = INIT_POINTS[Symbol(sysname)]
     x0size = INIT_SIZES[Symbol(sysname)]
@@ -101,7 +115,7 @@ function get_max_diam_multi_dim(
 
     preset_dims = DIMS[Symbol(sysname)]
     get_max_diam(
-        s, latency_ms, errors, 
+        s, latency_ms, errors,
         x0center, x0size; K=K, return_pipe=return_pipe, dims=preset_dims
     )
 end
@@ -113,29 +127,29 @@ Compute reachable sets for the dynamics ``x[k+1] = Φ x[k] + w``, where ``w`` is
 
 If `max_order` is given, we reduce order of the reachable set to `reduced_order` when it exceeds this limit.  If `remove_redundant` is true, redundant generators are removed at each step.
 """
-function reach(Φ::Function, x0::LazySet, W::Function, H::Integer, nx::Integer; 
-        max_order::Real=Inf, reduced_order::Real=2, remove_redundant::Bool=true, return_pipe::Bool=false, dims::Union{Nothing,AbstractVector{<:Integer}}=nothing)
-	if return_pipe
-		x = OffsetArray(Vector{LazySet}(undef, H+1), Origin(0))
-		x[0] = x0
-	end
+function reach(Φ::Function, x0::LazySet, W::Function, H::Integer, nx::Integer;
+    max_order::Real=Inf, reduced_order::Real=2, remove_redundant::Bool=true, return_pipe::Bool=false, dims::Union{Nothing,AbstractVector{<:Integer}}=nothing)
+    if return_pipe
+        x = OffsetArray(Vector{LazySet}(undef, H + 1), Origin(0))
+        x[0] = x0
+    end
 
-	curr_x, maxdiam = x0, 0.
-	for k = 1:H
-		curr_x = minkowski_sum(linear_map(Φ(k-1), curr_x), W(k-1, curr_x))
-		if remove_redundant
-			curr_x = remove_redundant_generators(curr_x)
-		end
-		if order(curr_x) > max_order
-			curr_x = reduce_order(curr_x, reduced_order)
-		end
-		if return_pipe
-			x[k] = curr_x
-		end
+    curr_x, maxdiam = x0, 0.
+    for k = 1:H
+        curr_x = minkowski_sum(linear_map(Φ(k - 1), curr_x), W(k - 1, curr_x))
+        if remove_redundant
+            curr_x = remove_redundant_generators(curr_x)
+        end
+        if order(curr_x) > max_order
+            curr_x = reduce_order(curr_x, reduced_order)
+        end
+        if return_pipe
+            x[k] = curr_x
+        end
         maxdiam = max(maxdiam, diam(curr_x, nx; dims=dims))
-	end
-	
-	return return_pipe ? (maxdiam, Flowpipe([ReachSet(x_k, k) for (k, x_k) in enumerate(x)])) : (maxdiam,)
+    end
+
+    return return_pipe ? (maxdiam, Flowpipe([ReachSet(x_k, k) for (k, x_k) in enumerate(x)])) : (maxdiam,)
 end
 reach(Φ, x0::LazySet, W, H::Integer, nx::Integer; kwargs...) = reach(tofunc(Φ), x0, tofunc(W), H, nx; kwargs...)
 
@@ -143,7 +157,7 @@ reach(Φ, x0::LazySet, W, H::Integer, nx::Integer; kwargs...) = reach(tofunc(Φ)
 Convert x to a function with constant return value if it is not already a function.
 """
 function tofunc(x)
-	x isa Function ? x : (args...) -> x
+    x isa Function ? x : (args...) -> x
 end
 
 """
@@ -152,12 +166,12 @@ end
 Return the maximum diameter of reachable sets in a Flowpipe.
 """
 function max_diam(pipe::Flowpipe, nx::Integer)
-	[diam(rs.X, nx) for rs in pipe] |> maximum
+    [diam(rs.X, nx) for rs in pipe] |> maximum
 end
 
 function diam(x::LazySet, nx::Integer; dims::Union{Nothing,AbstractVector{<:Integer}}=nothing)
     selected_dims = dims === nothing ? (1:nx) : dims
-    2 * sum(abs.(x.generators[selected_dims,:]), dims=2) |> maximum
+    2 * sum(abs.(x.generators[selected_dims, :]), dims=2) |> maximum
 end
 
 # s = benchmarks[:F1]

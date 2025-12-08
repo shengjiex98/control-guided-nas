@@ -19,7 +19,10 @@ jl.include(str(pathlib.Path(__file__).parent.resolve()) + "/get_max_diam.jl")
 
 
 def get_max_diam(
-    latency: float, errors: Union[float, list[float]], sysname: str = "ACCLK"
+    latency: float,
+    errors: Union[float, list[float]],
+    sysname: str = "ACCLK",
+    relative_error: bool = True,
 ) -> float:
     """Compute maximum diameter of reachable set for a control system.
 
@@ -32,6 +35,11 @@ def get_max_diam(
                 - Linear systems: "F1", "CC"
                 - Multi-dimensional linear systems: "ACCLK"
                 - Non-linear systems: "CAR"
+        relative_error: If True, errors are interpreted as relative (percentage)
+                       of state values; if False, errors are absolute values.
+                       Currently only applies to linear systems (LINEAR_SYS and
+                       MULTI_DIM_LINEAR_SYS). Has no effect on non-linear systems.
+                       Default: True
 
     Returns:
         Maximum diameter of reachable set as float
@@ -58,6 +66,7 @@ def get_max_diam(
             x0center,
             x0size,
             return_pipe=False,
+            relative_error=relative_error,
         )[0]
     elif sysname in MULTI_DIM_LINEAR_SYS:
         if isinstance(errors, list):
@@ -71,6 +80,7 @@ def get_max_diam(
             round(latency * 1000),
             errors_a,
             return_pipe=False,
+            relative_error=relative_error,
         )[0]
     elif sysname in NON_LINEAR_SYS:
         if isinstance(errors, float):
