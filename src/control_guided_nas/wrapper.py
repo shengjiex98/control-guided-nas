@@ -10,13 +10,12 @@ from typing import List, Union
 
 import numpy as np
 
-from .linear_reach import acc_lk_presets, get_max_diam as linear_get_max_diam
-from .linear_reach import models
+from .linear_reach import acc_lk_presets, models
+from .linear_reach import get_max_diam as linear_get_max_diam
 
 LINEAR_SYS = ["F1", "CC"]
 MULTI_DIM_LINEAR_SYS = ["ACCLK"]
 NON_LINEAR_SYS = ["CAR"]
-
 
 
 def get_max_diam(
@@ -24,6 +23,7 @@ def get_max_diam(
     errors: Union[float, List[float]],
     sysname: str = "ACCLK",
     relative_error: bool = True,
+    let: bool = False,
 ) -> float:
     """Compute maximum diameter of reachable set for a control system.
 
@@ -41,6 +41,10 @@ def get_max_diam(
                        Currently only applies to linear systems (LINEAR_SYS and
                        MULTI_DIM_LINEAR_SYS). Has no effect on non-linear systems.
                        Default: True
+        let: If True, use logical execution time (LET) dynamics, where control
+             input computed from the current state is applied at the next
+             sampling period. If False, apply control immediately (legacy).
+             Default: False
 
     Returns:
         Maximum diameter of reachable set as float
@@ -69,6 +73,7 @@ def get_max_diam(
             x0size,
             return_pipe=False,
             relative_error=relative_error,
+            let=let,
         )[0]
     elif sysname in MULTI_DIM_LINEAR_SYS:
         if isinstance(errors, list):
@@ -94,6 +99,7 @@ def get_max_diam(
             relative_error=relative_error,
             dims=dims,
             k_gain_override=k_gain,
+            let=let,
         )[0]
     elif sysname in NON_LINEAR_SYS:
         from noisyreach.deviation import AVAIL_SYSTEMS, deviation

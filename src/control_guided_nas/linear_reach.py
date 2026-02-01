@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import numpy as np
 import control as ct
+import numpy as np
 
 from .zonotope import (
     Zonotope,
@@ -13,26 +13,34 @@ from .zonotope import (
 )
 
 
-def _phi_matrices(system, k_gain: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    # Augmented dynamics matches Julia layout:
-    # state = [x; u_hold; u_ctrl], where u_hold is last applied control
-    # and u_ctrl is the freshly computed control at control instants.
+def _phi_matrices(
+    system, k_gain: np.ndarray, let: bool
+) -> tuple[np.ndarray, np.ndarray]:
     a, b = system.A, system.B
     nx, nu = a.shape[0], b.shape[1]
-    phi_control = np.block(
-        [
-            [a, b, np.zeros((nx, nu))],
-            [np.zeros((nu, nx + nu)), np.eye(nu)],
-            [-k_gain, np.zeros((nu, 2 * nu))],
-        ]
-    )
-    phi_hold = np.block(
-        [
-            [a, b, np.zeros((nx, nu))],
-            [np.zeros((nu, nx)), np.eye(nu), np.zeros((nu, nu))],
-            [np.zeros((nu, nx + nu)), np.eye(nu)],
-        ]
-    )
+    if let:
+        # Augmented dynamics for logical execution time (LET):
+        # state = [x; u_hold; u_ctrl], where u_hold is last applied control
+        # and u_ctrl is the freshly computed control at control instants.
+        phi_control = np.block(
+            [
+                [a, b, np.zeros((nx, nu))],
+                [np.zeros((nu, nx + nu)), np.eye(nu)],
+                [-k_gain, np.zeros((nu, 2 * nu))],
+            ]
+        )
+        phi_hold = np.block(
+            [
+                [a, b, np.zeros((nx, nu))],
+                [np.zeros((nu, nx)), np.eye(nu), np.zeros((nu, nu))],
+                [np.zeros((nu, nx + nu)), np.eye(nu)],
+            ]
+        )
+    else:
+        # Immediate-apply dynamics (legacy behavior):
+        # state = [x; u], where u is applied in the same sampling period.
+        phi_control = np.block([[a, b], [-k_gain, np.zeros((nu, nu))]])
+        phi_hold = np.block([[a, b], [np.zeros((nu, nx)), np.eye(nu)]])
     return phi_control, phi_hold
 
 
@@ -43,6 +51,7 @@ def _error_bound(
     nx: int,
     nu: int,
     relative_error: bool,
+    let: bool,
 ) -> Zonotope:
     # Error zonotope is injected into the u_ctrl dimensions only.
     # If relative_error is True, errors scale with current state bounds.
@@ -52,8 +61,11 @@ def _error_bound(
         control_error = -k_gain @ (errors * max_states)
     else:
         control_error = -k_gain @ errors
-    diag = np.concatenate([np.zeros(nx), np.zeros(nu), control_error])
-    return Zonotope(np.zeros(nx + 2 * nu), np.diag(diag))
+    if let:
+        diag = np.concatenate([np.zeros(nx), np.zeros(nu), control_error])
+        return Zonotope(np.zeros(nx + 2 * nu), np.diag(diag))
+    diag = np.concatenate([np.zeros(nx), control_error])
+    return Zonotope(np.zeros(nx + nu), np.diag(diag))
 
 
 def reach(
@@ -77,13 +89,18 @@ def reach(
     current = x0
     max_diam = 0.0
     for k in range(1, horizon + 1):
-        current = minkowski_sum(linear_map(phi_fn(k - 1), current), w_fn(k - 1, current))
+        current = minkowski_sum(
+            linear_map(phi_fn(k - 1), current), w_fn(k - 1, current)
+        )
         # If the reachable set becomes non-finite (inf/nan), the system has
         # blown up numerically for this horizon or parameter set. At that point
         # further propagation is meaningless, so we return +inf as the diameter
         # to signal "unbounded/overflow" rather than raising or producing NaNs.
         # This makes long-running scans robust and keeps results interpretable.
-        if not np.isfinite(current.center).all() or not np.isfinite(current.generators).all():
+        if (
+            not np.isfinite(current.center).all()
+            or not np.isfinite(current.generators).all()
+        ):
             max_diam = np.inf
             break
         if remove_redundant:
@@ -108,9 +125,11 @@ def get_max_diam(
     relative_error: bool = True,
     dims: list[int] | None = None,
     k_gain_override: np.ndarray | None = None,
+    let: bool = False,
 ):
     # Main Python entry for linear systems (F1, CC):
     # computes max diameter over horizon, optionally returning the pipe.
+    # Set let=True to use logical execution time dynamics (delayed control).
     errors = np.asarray(errors, dtype=float).reshape(-1)
     nx = system.A.shape[0]
     nu = system.B.shape[1]
@@ -128,18 +147,20 @@ def get_max_diam(
     else:
         k_gain = np.asarray(k_gain_override, dtype=float)
 
-    phi_control, phi_hold = _phi_matrices(discrete, k_gain)
+    phi_control, phi_hold = _phi_matrices(discrete, k_gain, let)
     phi = lambda k: phi_control if k % latency_ms == 0 else phi_hold
 
+    aug_nu = 2 * nu if let else nu
     x0 = Zonotope(
-        np.concatenate([x0center, np.zeros(2 * nu)]),
-        np.diag(np.concatenate([x0size, np.zeros(2 * nu)])),
+        np.concatenate([x0center, np.zeros(aug_nu)]),
+        np.diag(np.concatenate([x0size, np.zeros(aug_nu)])),
     )
 
     def w_fn(k, x):
         if k % latency_ms == 0:
-            return _error_bound(k_gain, errors, x, nx, nu, relative_error)
-        return Zonotope(np.zeros(nx + 2 * nu), np.zeros((nx + 2 * nu, nx + 2 * nu)))
+            return _error_bound(k_gain, errors, x, nx, nu, relative_error, let)
+        size = nx + aug_nu
+        return Zonotope(np.zeros(size), np.zeros((size, size)))
 
     return reach(phi, x0, w_fn, 1000, nx, return_pipe=return_pipe, dims=dims)
 
@@ -174,7 +195,12 @@ def models() -> dict[str, ct.StateSpace]:
 
     sys_css = ct.ss(
         np.array(
-            [[0.0, 1.0, 0.0, 0.0], [-8.0, -4.0, 8.0, 4.0], [0.0, 0.0, 0.0, 1.0], [80.0, 40.0, -160.0, -60.0]],
+            [
+                [0.0, 1.0, 0.0, 0.0],
+                [-8.0, -4.0, 8.0, 4.0],
+                [0.0, 0.0, 0.0, 1.0],
+                [80.0, 40.0, -160.0, -60.0],
+            ],
             dtype=float,
         ),
         np.array([[0.0], [80.0], [20.0], [-1120.0]], dtype=float),
