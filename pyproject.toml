@@ -13,6 +13,7 @@ dependencies = [
     "juliapkg",
     "noisyreach @ git+https://github.com/shengjiex98/noisyreach",
     "numpy",
+    "control",
 ]
 
 [project.optional-dependencies]

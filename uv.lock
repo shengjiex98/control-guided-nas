@@ -446,6 +446,8 @@ name = "control-guided-nas"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "control", version = "0.9.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "control", version = "0.10.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "juliacall" },
     { name = "juliapkg" },
     { name = "noisyreach" },
@@ -465,6 +467,7 @@ examples = [
 
 [package.metadata]
 requires-dist = [
+    { name = "control" },
     { name = "ipykernel", marker = "extra == 'examples'" },
     { name = "ipywidgets", marker = "extra == 'examples'" },
     { name = "juliacall" },
