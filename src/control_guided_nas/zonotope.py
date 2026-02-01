@@ -37,7 +37,21 @@ def linear_map(matrix: np.ndarray, zonotope: Zonotope) -> Zonotope:
     # Apply linear map x -> A x to the zonotope:
     # center becomes A*center, generators become A*G.
     matrix = np.asarray(matrix, dtype=float)
-    return Zonotope(matrix @ zonotope.center, matrix @ zonotope.generators)
+    # Runtime stability note:
+    # For some unstable systems and long horizons, the augmented dynamics can
+    # explode numerically (very large values, inf, or nan). NumPy will warn on
+    # these during matmul. We intentionally silence those warnings here and
+    # explicitly propagate non-finite values to `inf` so downstream logic can
+    # detect and exit early in a controlled way.
+    # This keeps logs clean and makes the failure mode explicit instead of noisy.
+    with np.errstate(divide="ignore", over="ignore", invalid="ignore"):
+        center = matrix @ zonotope.center
+        generators = matrix @ zonotope.generators
+    # If anything becomes non-finite, mark it as inf so reachability can stop.
+    if not np.isfinite(center).all() or not np.isfinite(generators).all():
+        center = np.where(np.isfinite(center), center, np.inf)
+        generators = np.where(np.isfinite(generators), generators, np.inf)
+    return Zonotope(center, generators)
 
 
 def minkowski_sum(left: Zonotope, right: Zonotope) -> Zonotope:

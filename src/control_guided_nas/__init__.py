@@ -6,7 +6,7 @@ maximum diameters of reachable sets for different control system types.
 
 System Types:
 - Linear systems: F1, CC (handled by Python backend)
-- Multi-dimensional linear systems: ACCLK (handled by Julia backend,
+- Multi-dimensional linear systems: ACCLK (handled by Python backend,
   appropriate for multi-sensing-error case studies)
 - Non-linear systems: CAR (handled by noisyreach Python library)
 

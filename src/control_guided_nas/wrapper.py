@@ -6,30 +6,17 @@ of reachable sets for control systems under various conditions.
 
 from __future__ import annotations
 
-import pathlib
 from typing import List, Union
 
 import numpy as np
 
-from .linear_reach import get_max_diam as linear_get_max_diam
+from .linear_reach import acc_lk_presets, get_max_diam as linear_get_max_diam
 from .linear_reach import models
 
 LINEAR_SYS = ["F1", "CC"]
 MULTI_DIM_LINEAR_SYS = ["ACCLK"]
 NON_LINEAR_SYS = ["CAR"]
 
-_julia_initialized = False
-_jl = None
-
-
-def jl_init() -> None:
-    global _julia_initialized, _jl
-    if not _julia_initialized:
-        from juliacall import Main as jl
-
-        _jl = jl
-        _jl.include(str(pathlib.Path(__file__).parent.resolve()) + "/get_max_diam.jl")
-        _julia_initialized = True
 
 
 def get_max_diam(
@@ -90,12 +77,23 @@ def get_max_diam(
             raise ValueError(
                 f"`errors` must be a list of floats for MULTI_DIM_LINEAR_SYS, got {type(errors)}."
             )
-        jl_init()
-        return _jl.get_max_diam_multi_dim(
-            sysname,
+        system = models()[sysname]
+        x0center, x0size, k_gain, error_map, dims = acc_lk_presets()
+        if errors_a.shape[0] != error_map.shape[1]:
+            raise ValueError(
+                f"`errors` must have length {error_map.shape[1]} for {sysname}."
+            )
+        mapped_errors = error_map @ errors_a
+        return linear_get_max_diam(
+            system,
             round(latency * 1000),
-            errors_a,
+            mapped_errors,
+            x0center,
+            x0size,
             return_pipe=False,
+            relative_error=relative_error,
+            dims=dims,
+            k_gain_override=k_gain,
         )[0]
     elif sysname in NON_LINEAR_SYS:
         from noisyreach.deviation import AVAIL_SYSTEMS, deviation
