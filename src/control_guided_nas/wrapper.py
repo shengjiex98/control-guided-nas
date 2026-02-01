@@ -63,8 +63,8 @@ def get_max_diam(
             raise ValueError(
                 f"`errors` must be a float or a list of floats, got {type(errors)}."
             )
-        x0center = np.asarray([1.0] * nx)
-        x0size = np.asarray([0.1] * nx)
+        x0center = np.asarray([10.0] * nx)
+        x0size = np.asarray([1.0] * nx)
         return linear_get_max_diam(
             system,
             round(latency * 1000),
