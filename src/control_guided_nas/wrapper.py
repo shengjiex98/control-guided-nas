@@ -4,18 +4,32 @@ This module provides the main Python interface for computing maximum diameters
 of reachable sets for control systems under various conditions.
 """
 
+from __future__ import annotations
+
 import pathlib
 from typing import List, Union
 
 import numpy as np
-from juliacall import Main as jl
-from noisyreach.deviation import AVAIL_SYSTEMS, deviation
+
+from .linear_reach import get_max_diam as linear_get_max_diam
+from .linear_reach import models
 
 LINEAR_SYS = ["F1", "CC"]
 MULTI_DIM_LINEAR_SYS = ["ACCLK"]
 NON_LINEAR_SYS = ["CAR"]
 
-jl.include(str(pathlib.Path(__file__).parent.resolve()) + "/get_max_diam.jl")
+_julia_initialized = False
+_jl = None
+
+
+def jl_init() -> None:
+    global _julia_initialized, _jl
+    if not _julia_initialized:
+        from juliacall import Main as jl
+
+        _jl = jl
+        _jl.include(str(pathlib.Path(__file__).parent.resolve()) + "/get_max_diam.jl")
+        _julia_initialized = True
 
 
 def get_max_diam(
@@ -48,19 +62,20 @@ def get_max_diam(
         ValueError: If sysname is not recognized or errors type is invalid
     """
     if sysname in LINEAR_SYS:
-        s = jl.seval(f"benchmarks[:{sysname}]")
+        system = models()[sysname]
+        nx = system.A.shape[0]
         if isinstance(errors, float):
-            errors_a = np.asarray([errors] * s.nx)
+            errors_a = np.asarray([errors] * nx)
         elif isinstance(errors, list):
             errors_a = np.asarray(errors)
         else:
             raise ValueError(
                 f"`errors` must be a float or a list of floats, got {type(errors)}."
             )
-        x0center = np.asarray([1.0] * s.nx)
-        x0size = np.asarray([0.1] * s.nx)
-        return jl.get_max_diam(
-            s,
+        x0center = np.asarray([1.0] * nx)
+        x0size = np.asarray([0.1] * nx)
+        return linear_get_max_diam(
+            system,
             round(latency * 1000),
             errors_a,
             x0center,
@@ -75,13 +90,16 @@ def get_max_diam(
             raise ValueError(
                 f"`errors` must be a list of floats for MULTI_DIM_LINEAR_SYS, got {type(errors)}."
             )
-        return jl.get_max_diam_multi_dim(
+        jl_init()
+        return _jl.get_max_diam_multi_dim(
             sysname,
             round(latency * 1000),
             errors_a,
             return_pipe=False,
         )[0]
     elif sysname in NON_LINEAR_SYS:
+        from noisyreach.deviation import AVAIL_SYSTEMS, deviation
+
         if isinstance(errors, float):
             errors_a = [errors] * AVAIL_SYSTEMS[sysname]["dims"]
         elif isinstance(errors, list):
