@@ -1,0 +1,54 @@
+  RC (sys_rcn) — Resistor-Capacitor Network
+  Two-node RC circuit with R1=100kΩ, R2=500kΩ, R3=200kΩ, C1=2μF, C2=10μF. States are
+  node voltages. The A matrix encodes dV/dt = (V_in - V) / (R·C) coupling between
+  nodes. Input is a voltage source through R1.
+
+  F1 (sys_f1t) — F1/10 Car
+  Lateral dynamics: x1 = lateral position, x2 = lateral velocity. ẋ1 = 6.5·x2
+  (position from velocity), ẋ2 = (6.5/0.3302)·u (acceleration from steering input,
+  where 0.3302 is the wheelbase). A simplified bicycle model at constant longitudinal
+   speed.
+
+  DC (sys_dcm) — DC Motor
+  x1 = angular velocity (ω), x2 = armature current (i). ẋ1 = -10ω + i (mechanical:
+  friction + back-EMF torque), ẋ2 = -0.02ω - 2i + 2u (electrical: back-EMF +
+  resistance + applied voltage). Classic motor equations L·di/dt = V - Ri - Kω and
+  J·dω/dt = Ki - bω.
+
+  CS (sys_css) — Car Suspension (Quarter-Car)
+  4 states: x1 = sprung mass displacement, x2 = sprung velocity, x3 = unsprung mass
+  displacement, x4 = unsprung velocity. The A matrix shows spring/damper coupling:
+  sprung mass sees stiffness 8 and damping 4, unsprung mass sees stiffness 160 and
+  damping 60, with cross-coupling terms. This is a standard quarter-car model with
+  active suspension input.
+
+  EW (sys_ewb) — Electronic Wedge Brake
+  x1 = wedge displacement, x2 = wedge velocity. ẋ2 = 8395.1·x1 + 4.0451·u — the large
+   positive coefficient on x1 is the self-reinforcing wedge effect (unstable
+  open-loop), where brake pad friction amplifies displacement. C matrix scales output
+   by ~7992 (force from displacement). Requires active control to stabilize.
+
+  C1 (sys_cc1) — Cruise Control (1st order)
+  Single state: vehicle speed deviation. ẋ = -0.05x + 0.01u — first-order drag model
+  where 0.05 is aerodynamic/friction damping and 0.01 is throttle-to-acceleration
+  gain. Simplest possible longitudinal vehicle model.
+
+  CC (sys_cc2) — Cruise Control (3rd order)
+  3 states likely representing speed error, integral of error, and actuator dynamics.
+   The characteristic polynomial from A has coefficients [6.0476, 5.2856, 0.238],
+  suggesting a plant with engine lag and drivetrain compliance. Input gain 2.4767
+  enters through the actuator state.
+
+  MPC (sys_mpc) — Model Predictive Control plant
+  Transfer function (3s + 1)/(s² + 0.6s + 1) — a second-order underdamped oscillator
+  (ζ=0.3, ωn=1) with a zero at s=-1/3. Could represent a lightly damped mechanical or
+   thermal system. The low damping ratio means significant overshoot without control.
+
+  ACCLK (sys_acc_lk) — Adaptive Cruise Control + Lane Keeping
+  8 states: [lateral error, heading error, lateral velocity, yaw rate, longitudinal
+  gap, relative velocity, relative heading, relative yaw rate]. Uses a bicycle model
+  with front/rear cornering stiffnesses (cf=80kN/rad, cr=100kN/rad), vehicle mass
+  1500kg, yaw inertia 2500 kg·m², wheelbase split lf=1.2m/lr=1.6m, at vx=20 m/s. 4
+  inputs: front steering, longitudinal accel, rear steering, and a fourth channel.
+  Couples lateral dynamics (lane keeping) with longitudinal dynamics (adaptive
+  cruise).
